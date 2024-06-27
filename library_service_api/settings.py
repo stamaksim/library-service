@@ -26,7 +26,9 @@ SECRET_KEY = "django-insecure-2qnji4b3q&+241rxamlp5kcw9o#l1wikk2p74!)h*nwzd!sg3%
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
 
 # Application definition
 
@@ -42,12 +44,14 @@ INSTALLED_APPS = [
     "user.apps.UserConfig",
     "borrowing.apps.BorrowingConfig",
     "payment.apps.PaymentConfig",
+    "debug_toolbar",
 ]
 
 AUTH_USER_MODEL = "user.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
