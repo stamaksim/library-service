@@ -1,3 +1,9 @@
-from django.shortcuts import render
+from rest_framework import viewsets
 
-# Create your views here.
+from book.models import Books
+from book.serializers import BookSerializer
+
+
+class BookViewSet(viewsets.ModelViewSet):
+    queryset = Books.objects.all()
+    serializer_class = BookSerializer
