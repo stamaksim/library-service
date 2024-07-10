@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticate
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from payment.service import create_stripe_session
 from .models import Borrowing
 from .serializers import (
     BorrowingListSerializer,
@@ -13,6 +14,7 @@ from .serializers import (
     CreateBorrowingSerializer,
     BorrowingReturnSerializer,
 )
+from .telegram_utils import send_telegram_message
 
 
 class BorrowingFilter(filters.FilterSet):
@@ -72,6 +74,17 @@ class BorrowingViewSet(
         if user.is_staff:
             return Borrowing.objects.all()
         return Borrowing.objects.filter(user=user)
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        message = f"New borrowing created:\nUser: {instance.user.id}\nUser: {instance.user.email}\nBook: {instance.book.title}"
+        result = send_telegram_message(message)
+        if not result["success"]:
+            print(f"Failed to send Telegram message: {result['message']}")
+
+        create_stripe_session(instance, instance.user)
+
+        return instance
 
     @action(detail=True, methods=["post"])
     def return_book(self, request, pk=None):
