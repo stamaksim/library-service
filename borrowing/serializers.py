@@ -5,7 +5,6 @@ from book.models import Books
 from book.serializers import BookSerializer
 from borrowing.models import Borrowing
 from payment.serializers import PaymentSerializer
-from payment.service import create_stripe_session
 from user.models import User
 
 
@@ -78,7 +77,6 @@ class CreateBorrowingSerializer(serializers.ModelSerializer):
             expected_return_date=validated_data.get("expected_return_date"),
         )
 
-        create_stripe_session(borrowing, user=user)
         return borrowing
 
 

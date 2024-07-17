@@ -10,18 +10,27 @@ from borrowing.telegram_utils import send_telegram_message
 def check_overdue_borrowings():
     now = datetime.now()
     tomorrow = now + timedelta(days=1)
-    overdue_borrowings = Borrowing.objects.filter(
-        expected_return_date__lte=tomorrow, actual_return_date__isnull=True
-    )
 
-    if overdue_borrowings.exists():
-        for borrowing in overdue_borrowings:
+    all_borrowings = Borrowing.objects.filter(actual_return_date__isnull=True)
+
+    if all_borrowings.exists():
+        for borrowing in all_borrowings:
+            status = (
+                "Overdue" if borrowing.expected_return_date <= now else "Not overdue"
+            )
             message = (
-                f"Overdue borrowing:\n"
+                f"Borrowing status:\n"
                 f"User: {borrowing.user.email}\n"
                 f"Book: {borrowing.book.title}\n"
                 f"Expected return date: {borrowing.expected_return_date}\n"
+                f"Status: {status}\n"
             )
-            send_telegram_message(message)
+            try:
+                send_telegram_message(message)
+            except Exception as e:
+                pass
     else:
-        send_telegram_message("No borrowings overdue today!")
+        try:
+            send_telegram_message("No active borrowings today!")
+        except Exception as e:
+            pass

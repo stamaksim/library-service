@@ -152,11 +152,6 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    # "DEFAULT_THROTTLE_CLASSES": [
-    #     "rest_framework.throttling.AnonRateThrottle",
-    #     "rest_framework.throttling.UserRateThrottle",
-    # ],
-    # "DEFAULT_THROTTLE_RATES": {"anon": "100/day", "user": "100/day"},
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 5,
 }
@@ -179,8 +174,11 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_BEAT_SCHEDULE = {
     "check_overdue_borrowings": {
         "task": "borrowing.tasks.check_overdue_borrowings",
-        "schedule": crontab(hour=18, minute=0),
+        "schedule": timedelta(minutes=1),
     },
 }
-
+STRIPE_PUBLIC_KEY = "pk_test_51PaK3CJEX141vdF7t3phwDcnzhXrPgTTMtk5Zk7g4wZYLRhqS5snMVjdwUG4J2yb5h07hxejiZHLbmvc3qvNXLtd00ofJLinER"
 STRIPE_SECRET_KEY = "sk_test_51PaK3CJEX141vdF7lNKk6HvnRe1ImxwO9Y4lkRiEdnT23vQn3mYyxPtjwVTkuBh1ktaB1KmQMtShWCTuEtj3oK5Y00YFs2oeYI"
+STRIPE_ENDPOINT_SECRET = (
+    "whsec_256425e324199d60981fc31f17d56a2ebd6c3513689801fd0e8b1754012d7c3f"
+)

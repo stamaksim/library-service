@@ -4,6 +4,7 @@ from .models import Payment
 
 
 class PaymentSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Payment
         fields = (
@@ -11,6 +12,7 @@ class PaymentSerializer(serializers.ModelSerializer):
             "status",
             "type",
             "borrowing",
+            "session",
             "session_id",
             "money_to_pay",
         )

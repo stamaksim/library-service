@@ -2,11 +2,14 @@ from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import mixins
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from payment.service import create_stripe_session
+from payment.views import CreatePaymentSessionView
+
+# from payment.service import create_stripe_session
 from .models import Borrowing
 from .serializers import (
     BorrowingListSerializer,
@@ -27,8 +30,8 @@ class BorrowingFilter(filters.FilterSet):
 
     def filter_is_active(self, queryset, name, value):
         if value:
-            return queryset.filter(actual_return_data__isnull=True)
-        return queryset.exclude(actual_return_data__isnull=True)
+            return queryset.filter(actual_return_date__isnull=True)
+        return queryset.exclude(actual_return_date__isnull=True)
 
 
 class BorrowingViewSet(
@@ -82,8 +85,13 @@ class BorrowingViewSet(
         if not result["success"]:
             print(f"Failed to send Telegram message: {result['message']}")
 
-        create_stripe_session(instance, instance.user)
+        payment_view = CreatePaymentSessionView.as_view()
+        request = self.request._request
+        response = payment_view(request, pk=instance.id)
 
+        if response.status_code != 200:
+            instance.delete()
+            raise ValidationError("Failed to create Stripe payment session.")
         return instance
 
     @action(detail=True, methods=["post"])
