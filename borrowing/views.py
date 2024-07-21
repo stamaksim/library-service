@@ -1,15 +1,15 @@
+from django.utils import timezone
 from django_filters import rest_framework as filters
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import mixins
+from rest_framework import mixins, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from payment.service import calculate_fine
 from payment.views import CreatePaymentSessionView
-
-# from payment.service import create_stripe_session
 from .models import Borrowing
 from .serializers import (
     BorrowingListSerializer,
@@ -79,6 +79,15 @@ class BorrowingViewSet(
         return Borrowing.objects.filter(user=user)
 
     def perform_create(self, serializer):
+        user = self.request.user
+        active_borrowings = Borrowing.objects.filter(
+            user=user, actual_return_date__isnull=True
+        )
+
+        if active_borrowings.exists():
+            raise ValidationError(
+                "You already have an active borrowing. Please return the current book before borrowing a new one."
+            )
         instance = serializer.save()
         message = f"New borrowing created:\nUser: {instance.user.id}\nUser: {instance.user.email}\nBook: {instance.book.title}"
         result = send_telegram_message(message)
@@ -94,12 +103,32 @@ class BorrowingViewSet(
             raise ValidationError("Failed to create Stripe payment session.")
         return instance
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], url_path="return")
     def return_book(self, request, pk=None):
         borrowing = self.get_object()
+        if borrowing.actual_return_date is not None:
+            return Response(
+                {"detail": "This book has already been returned."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = self.get_serializer(borrowing, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            borrowing.delete()
-            return Response({"detail": "Book returned and borrowing record deleted"})
-        return Response(serializer.errors, status=400)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(actual_return_date=timezone.now().date())
+
+        fine = calculate_fine(borrowing)
+
+        if fine > 0:
+            payment_view = CreatePaymentSessionView.as_view()
+            request_data_copy = request.data.copy()
+            request_data_copy["fine"] = fine
+
+            mutable_request = request._request
+            mutable_request.POST = mutable_request.POST.copy()
+            mutable_request.POST.update(request_data_copy)
+
+            response = payment_view(mutable_request, pk=borrowing.id)
+
+            if response.status_code != 200:
+                raise ValidationError("Failed to create Stripe payment session.")
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
