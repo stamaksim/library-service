@@ -6,6 +6,6 @@ from book.views import BookViewSet
 router = routers.DefaultRouter()
 
 app_name = "book"
-router.register("", BookViewSet)
+router.register("", BookViewSet, basename="book")
 
 urlpatterns = [path("", include(router.urls))]

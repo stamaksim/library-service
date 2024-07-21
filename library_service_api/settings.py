@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
@@ -31,16 +32,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-2qnji4b3q&+241rxamlp5kcw9o#l1wikk2p74!)h*nwzd!sg3%"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "default_secret_key")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost").split(",")
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
+IS_TESTING = len(sys.argv) > 1 and sys.argv[1] == "test"
 # Application definition
 
 INSTALLED_APPS = [
@@ -56,15 +58,18 @@ INSTALLED_APPS = [
     "user.apps.UserConfig",
     "borrowing.apps.BorrowingConfig",
     "payment.apps.PaymentConfig",
-    "debug_toolbar",
     "django_celery_beat",
+    "django_extensions",
+    "drf_spectacular",
 ]
+
+if not IS_TESTING:
+    INSTALLED_APPS.append("debug_toolbar")
 
 AUTH_USER_MODEL = "user.User"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -72,6 +77,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+if not IS_TESTING:
+    MIDDLEWARE.insert(1, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
 ROOT_URLCONF = "library_service_api.urls"
 
@@ -147,13 +154,25 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
-    # YOUR SETTINGS
-    # "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 5,
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Library Service Api",
+    "DESCRIPTION": "A comprehensive library-service system",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "defaultModelRendering": "model",
+        "defaultModelsExpandDepth": 2,
+        "defaultModelExpandDepth": 2,
+    },
 }
 
 SIMPLE_JWT = {
@@ -177,8 +196,8 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": timedelta(minutes=1),
     },
 }
-STRIPE_PUBLIC_KEY = "pk_test_51PaK3CJEX141vdF7t3phwDcnzhXrPgTTMtk5Zk7g4wZYLRhqS5snMVjdwUG4J2yb5h07hxejiZHLbmvc3qvNXLtd00ofJLinER"
-STRIPE_SECRET_KEY = "sk_test_51PaK3CJEX141vdF7lNKk6HvnRe1ImxwO9Y4lkRiEdnT23vQn3mYyxPtjwVTkuBh1ktaB1KmQMtShWCTuEtj3oK5Y00YFs2oeYI"
-STRIPE_ENDPOINT_SECRET = (
-    "whsec_256425e324199d60981fc31f17d56a2ebd6c3513689801fd0e8b1754012d7c3f"
+STRIPE_PUBLIC_KEY = os.environ.get("STRIPE_PUBLIC_KEY", "default_public_key")
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "default_secret_key")
+STRIPE_ENDPOINT_SECRET = os.environ.get(
+    "STRIPE_ENDPOINT_SECRET", "default_endpoint_secret"
 )

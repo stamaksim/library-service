@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
@@ -17,14 +16,15 @@ class Borrowing(models.Model):
     )
 
     def clean(self):
-        if self.expected_return_date < self.actual_return_date:
-            raise ValidationError(
-                {
-                    "expected_return_date": _(
-                        "Expected return date cannot be earlier than borrow date."
-                    )
-                }
-            )
+        if self.borrow_date and self.expected_return_date:
+            if self.expected_return_date < self.borrow_date:
+                raise ValidationError(
+                    {
+                        "expected_return_date": _(
+                            "Expected return date cannot be earlier than borrow date."
+                        )
+                    }
+                )
 
         if self.actual_return_date:
             if self.actual_return_date < self.borrow_date:
@@ -36,7 +36,10 @@ class Borrowing(models.Model):
                     }
                 )
 
-            if self.actual_return_date > self.expected_return_date:
+            if (
+                self.expected_return_date
+                and self.actual_return_date > self.expected_return_date
+            ):
                 raise ValidationError(
                     {
                         "actual_return_date": _(
